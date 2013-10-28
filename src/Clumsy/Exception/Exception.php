@@ -1,12 +1,11 @@
 <?php
-/**
- * Class Description
- * @author robert
- */
 
 namespace Clumsy\Exception;
 
-
+/**
+ * Class Exception
+ * @package Clumsy
+ */
 class Exception extends \RuntimeException
 {
 

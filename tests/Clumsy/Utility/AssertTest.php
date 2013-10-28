@@ -1,9 +1,20 @@
 <?php
 
 use Clumsy\Utility\Assert;
+use org\bovigo\vfs\vfsStream;
 
 class AssertTest extends PHPUnit_Framework_TestCase
 {
+    /**
+     * @var \org\bovigo\vfs\vfsStreamDirectory
+     */
+    private $_root;
+
+    public function setUp()
+    {
+        $this->_root = vfsStream::setup("test");
+    }
+
     public function testAssertString_WhenStringPassed()
     {
         Assert::assertString("This is a valid string.");
@@ -278,6 +289,144 @@ class AssertTest extends PHPUnit_Framework_TestCase
     {
         $reflection = new ReflectionClass("Clumsy\Utility\Assert");
         $this->assertTrue($reflection->isFinal());
+    }
+
+    public function testAssertFileExists_WhenFileFound()
+    {
+        $this->_root->addChild(vfsStream::newFile("myFile.txt"));
+        Assert::assertFileExists(vfsStream::url('test/myFile.txt'));
+    }
+
+    public function testAssertFileExists_WhenFileNotFound()
+    {
+        $this->setExpectedException("Clumsy\Exception\FileNotFoundException");
+        Assert::assertFileExists(vfsStream::url('test/myFile.txt'));
+    }
+
+    public function testAssertFileExists_WhenFileFoundIsNotAFile()
+    {
+        $this->_setExpectedInvalidArgumentException(vfsStream::url('test'), "file");
+        Assert::assertFileExists(vfsStream::url('test'));
+    }
+
+    public function testAssertDirExists_WhenDirFound()
+    {
+        Assert::assertDirExists(vfsStream::url('test'));
+    }
+
+    public function testAssertDirExists_WhenDirNotFound()
+    {
+        $this->setExpectedException("Clumsy\Exception\DirNotFoundException");
+        Assert::assertDirExists(vfsStream::url('test/doesNotExist'));
+    }
+
+    public function testAssertDirExists_WhenDirFoundIsNotADir()
+    {
+        $this->_root->addChild(vfsStream::newFile("myFile.txt"));
+        $this->_setExpectedInvalidArgumentException(vfsStream::url('test/myFile.txt'), "directory");
+        Assert::assertDirExists(vfsStream::url('test/myFile.txt'));
+    }
+
+    public function testAssertFileIsReadable_WhenIsReadable()
+    {
+        $this->_root->addChild(vfsStream::newFile("myFile.txt"));
+        Assert::assertFileIsReadable(vfsStream::url('test/myFile.txt'));
+    }
+
+    public function testAssertFileIsReadable_WhenNotReadable()
+    {
+        $this->setExpectedException("Clumsy\Exception\FileNotReadableException");
+        $this->_root->addChild(vfsStream::newFile("myFile.txt", 0));
+        Assert::assertFileIsReadable(vfsStream::url('test/myFile.txt'));
+    }
+
+    public function testAssertFileIsWritable_WhenIsWritable()
+    {
+        $this->_root->addChild(vfsStream::newFile("myFile.txt"));
+        Assert::assertFileIsWritable(vfsStream::url('test/myFile.txt'));
+    }
+
+    public function testAssertFileIsWritable_WhenNotWritable()
+    {
+        $this->setExpectedException("Clumsy\Exception\FileNotWritableException");
+        $this->_root->addChild(vfsStream::newFile("myFile.txt", 0));
+        Assert::assertFileIsWritable(vfsStream::url('test/myFile.txt'));
+    }
+
+    public function testAssertDirIsReadable_WhenIsReadable()
+    {
+        Assert::assertDirIsReadable(vfsStream::url("test"));
+    }
+
+    public function testAssertDirIsReadable_WhenNotReadable()
+    {
+        $this->setExpectedException("Clumsy\Exception\DirNotReadableException");
+        $this->_root->addChild(vfsStream::newDirectory("notReadable", 0));
+        Assert::assertDirIsReadable(vfsStream::url("test/notReadable"));
+    }
+
+    public function testAssertDirIsWritable_WhenIsWritable()
+    {
+        Assert::assertDirIsWritable(vfsStream::url("test"));
+    }
+
+    public function testAssertDirIsWritable_WhenNotWritable()
+    {
+        $this->setExpectedException("Clumsy\Exception\DirNotWritableException");
+        $this->_root->addChild(vfsStream::newDirectory("notReadable", 0));
+        Assert::assertDirIsWritable(vfsStream::url("test/notReadable"));
+    }
+
+    public function testAssertNonNegativeInt_WhenIntPassed()
+    {
+        Assert::assertNonNegativeInt(0);
+    }
+
+    public function testAssertNonNegativeInt_WhenNonIntPassed()
+    {
+        self::_setExpectedInvalidArgumentException(null, "int", "NULL");
+        Assert::assertNonNegativeInt(null);
+    }
+
+    public function testAssertNonNegativeInt_NegativeIntPassed()
+    {
+        self::_setExpectedInvalidArgumentException(-5, "non negative int");
+        Assert::assertNonNegativeInt(-5);
+    }
+
+    public function testAssertObject_WithObject()
+    {
+        $value = new stdClass();
+        Assert::assertObject($value);
+    }
+
+    public function testAssertObject_WithoutObject()
+    {
+        $this->_setExpectedInvalidArgumentException(5, "object", "integer");
+        Assert::assertObject(5);
+    }
+
+    public function testAssertInstanceOf_WithCorrectClass()
+    {
+        Assert::assertInstanceOf(new stdClass(), "stdClass");
+    }
+
+    public function testAssertInstanceOf_WithIncorrectClass()
+    {
+        $this->setExpectedException("Clumsy\Exception\InvalidArgumentException",
+            "Expected an object of class SomeOtherClass but received object of class stdClass");
+        Assert::assertInstanceOf(new stdClass(), "SomeOtherClass");
+    }
+
+    public function testAssertArray_WithArray()
+    {
+        Assert::assertArray(array());
+    }
+
+    public function testAssertArray_WithNonArray()
+    {
+        $this->_setExpectedInvalidArgumentException(null, "array", "NULL");
+        Assert::assertArray(null);
     }
 
     /**
